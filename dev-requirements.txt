@@ -1,0 +1,4 @@
+fabric
+podman-compose
+pytest
+watchdog[watchmedo]

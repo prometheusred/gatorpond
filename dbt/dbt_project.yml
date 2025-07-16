@@ -1,0 +1,6 @@
+name: "gatorpond"
+version: "1.0"
+profile: "gatorpond"
+config-version: 2
+
+model-paths: ["models"]

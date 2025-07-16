@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+ENV DAGSTER_HOME=/opt/dagster/dagster_home/
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential git curl libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/dagster
+
+# Install user code dependencies
+COPY requirements.txt /opt/dagster/requirements.txt
+RUN pip install --upgrade pip && pip install -r /opt/dagster/requirements.txt
+
+# Copy user code (everything in the context, which is dagster/user_code/)
+COPY . /opt/dagster/user_code
+
+# Expose gRPC port
+EXPOSE 4000
+
+CMD ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000", "-m", "user_code"]

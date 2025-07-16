@@ -1,0 +1,116 @@
+version: '3.8'
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+
+networks:
+  gatornet:
+    driver: bridge
+
+services:
+
+  postgres:
+    image: docker.io/library/postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gatornet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3
+    restart: always
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - gatornet
+
+  dagster-user-code:
+    build:
+      context: ./dagster/user_code
+      dockerfile: Dockerfile.user_code
+    image: gatorpond_user_code_image
+    volumes:
+      - ./dagster/user_code:/opt/dagster/user_code:ro
+    command:
+      - dagster
+      - api
+      - grpc
+      - -h
+      - 0.0.0.0
+      - -p
+      - "4000"
+      - -m
+      - user_code
+    networks:
+      - gatornet
+
+  dagster-webserver:
+    build:
+      context: ./dagster
+      dockerfile: Dockerfile.dagster_base
+    image: gatorpond_dagster_base_image
+    entrypoint:
+      - dagster-webserver
+      - -h
+      - "0.0.0.0"
+      - -p
+      - "3000"
+      - -w
+      - /opt/dagster/dagster_home/workspace.yml
+    ports:
+      - "${DAGSTER_UI_PORT:-3001}:3000"
+    volumes:
+      - ./config/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml:ro
+      - ./config/dagster/workspace.yml:/opt/dagster/dagster_home/workspace.yml:ro
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_URL: ${POSTGRES_URL}
+    depends_on:
+      - postgres
+      - dagster-user-code
+    networks:
+      - gatornet
+
+  dagster-daemon:
+    build:
+      context: ./dagster
+      dockerfile: Dockerfile.dagster_base
+    image: gatorpond_dagster_base_image
+    entrypoint:
+      - dagster-daemon
+      - run
+    volumes:
+      - ./config/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml:ro
+      - ./config/dagster/workspace.yml:/opt/dagster/dagster_home/workspace.yml:ro
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_URL: ${POSTGRES_URL}
+    depends_on:
+      - postgres
+      - dagster-user-code
+    networks:
+      - gatornet

@@ -1,0 +1,57 @@
+storage:
+  postgres:
+    postgres_url: postgresql://dagster:dagster@postgres:5432/dagster
+
+local_artifact_storage:
+  module: dagster.core.storage.root
+  class: LocalArtifactStorage
+  config:
+    base_dir: /opt/dagster/dagster_home/artifacts
+
+compute_logs:
+  module: dagster.core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir: /opt/dagster/dagster_home/compute_logs
+
+run_launcher:
+  module: dagster.core.launcher
+  class: DefaultRunLauncher
+
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: DefaultRunCoordinator
+
+telemetry:
+  enabled: false
+
+code_servers:
+  local_startup_timeout: 360
+
+retention:
+  schedule:
+    purge_after_days: 90
+  sensor:
+    purge_after_days:
+      skipped: 7
+      failure: 30
+      success: -1
+
+sensors:
+  use_threads: true
+  num_workers: 4
+
+schedules:
+  use_threads: true
+  num_workers: 4
+
+backfills:
+  use_threads: true
+  num_workers: 4
+
+run_monitoring:
+  enabled: true
+
+run_retries:
+  enabled: true
+  max_retries: 3

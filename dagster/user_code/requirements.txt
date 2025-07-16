@@ -1,0 +1,10 @@
+dagster
+dagster-dbt
+dagster-duckdb
+dagster-pandas
+dagster-postgres
+dbt-core
+dbt-postgres
+dbt-duckdb
+pandas
+pyarrow
